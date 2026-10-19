@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Royal Rovers Club Bingo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:oklch(0.33 0.075 160);
+  --panel:oklch(0.28 0.065 160);
+  --tile:oklch(0.38 0.075 160);
+  --line:oklch(0.5 0.07 160);
+  --text:oklch(0.99 0.004 100);
+  --muted:oklch(0.84 0.04 160);
+  --amber:oklch(0.99 0.004 100);
+  --ink:oklch(0.3 0.07 160);
+  --display:"Jost","Futura","Century Gothic",sans-serif;
+  --body:"Jost",system-ui,sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.4 var(--body);min-height:100dvh;-webkit-tap-highlight-color:transparent}
+::selection{background:var(--amber);color:var(--bg)}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+main{max-width:520px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 32px}
+h1{font:500 clamp(2.4rem,12.5vw,3.4rem)/1.12 var(--display);text-transform:uppercase;letter-spacing:.2em;margin:12px 0 28px}
+h1 span{display:block;margin-top:.5em;color:var(--muted);font-size:.5em;letter-spacing:.5em}
+.lead{color:var(--muted);margin:0 0 28px;max-width:38ch}
+.hidden{display:none!important}
+
+/* setup */
+.field{display:block;margin-bottom:16px}
+.field b{display:block;font:600 .8rem/1 var(--display);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+select{width:100%;min-height:48px;padding:0 40px 0 14px;background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23cfe3d8' stroke-width='2'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 16px center;border:1px solid var(--line);border-radius:10px;appearance:none;-webkit-appearance:none}
+.btn{min-height:52px;padding:0 22px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:600;cursor:pointer;transition:transform .15s var(--ease),background .15s}
+.btn:active{transform:scale(.97)}
+.btn.main{background:var(--amber);border-color:var(--amber);color:var(--ink);width:100%;margin-top:8px;font-size:1.05rem}
+.btn:hover{background:var(--tile)}
+.btn.main:hover{background:oklch(0.92 0.02 160)}
+
+/* card */
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.bar .back{min-height:44px;min-width:44px;padding:0 12px;flex:none}
+.cfg{font:500 .95rem/1.25 var(--display);letter-spacing:.14em;text-transform:uppercase;flex:1;min-width:0}
+.cfg small{display:block;color:var(--muted);font-family:var(--body);font-weight:400;text-transform:none;letter-spacing:0;font-size:.8rem;margin-top:2px}
+.count{font:500 1.6rem/1 var(--display);font-variant-numeric:tabular-nums;color:var(--amber)}
+.grid{display:grid;gap:6px}
+.tile{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;background:var(--tile);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:clamp(9px,2.75vw,12.5px);line-height:1.15;hyphens:auto;overflow-wrap:anywhere;overflow:hidden;--cross:oklch(0.97 0.01 100);transition:background .2s,opacity .2s,transform .15s var(--ease)}
+.tile:active{transform:scale(.95)}
+.tile span{position:relative;z-index:1}
+.tile.on{background:var(--panel);color:var(--muted);opacity:.75}
+.tile.on::before,.tile.on::after{content:"";position:absolute;inset:6%;animation:cross .35s var(--ease)}
+.tile.on::before{background:linear-gradient(to top right,transparent calc(50% - 1px),var(--cross) calc(50% - 1px),var(--cross) calc(50% + 1px),transparent calc(50% + 1px))}
+.tile.on::after{background:linear-gradient(to top left,transparent calc(50% - 1px),var(--cross) calc(50% - 1px),var(--cross) calc(50% + 1px),transparent calc(50% + 1px));animation-delay:.08s;animation-fill-mode:backwards}
+@keyframes cross{from{opacity:0;transform:scale(.4)}}
+.tile.free{background:var(--text);color:var(--ink);border-color:var(--text);font:600 clamp(12px,4vw,17px)/1 var(--display);letter-spacing:.2em;text-indent:.2em;cursor:default;opacity:1}
+.tile.free::before,.tile.free::after{display:none}
+.tile.win{background:var(--text);border-color:var(--text);color:var(--ink);--cross:var(--ink);opacity:1}
+.hint{color:var(--muted);font-size:.85rem;margin:16px 0 0}
+.again{margin-top:20px;width:100%}
+
+/* win */
+#win{position:fixed;inset:0;z-index:10;background:oklch(0.2 0.06 160 / .97);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.win-in{position:relative;max-width:420px;animation:rise .7s var(--ease)}
+@keyframes rise{from{opacity:0;transform:translateY(24px) scale(.96)}}
+.win h2{font:500 clamp(3rem,17vw,5rem)/.95 var(--display);text-transform:uppercase;letter-spacing:.16em;margin:0 0 18px;color:var(--text)}
+.win p{margin:0 0 6px;font-size:1.25rem;font-weight:600;text-wrap:balance}
+.win .sub{color:var(--muted);font-size:.95rem;font-weight:400;margin-bottom:28px}
+.win .btn{width:100%;margin-top:10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <section id="setup">
+    <h1>Royal<br>Rovers<br>Club<span>Bingo</span></h1>
+    <p class="lead">Выберите свою машину. Выдадим карточку из болячек, которые у неё бывают. Отмечайте найденные.</p>
+    <label class="field"><b>Модель</b><select id="model"></select></label>
+    <label class="field"><b>Двигатель</b><select id="engine"></select></label>
+    <label class="field"><b>Год</b><select id="year"></select></label>
+    <button class="btn main" id="go">Выдать карточку</button>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="bar">
+      <button class="btn back" id="back" aria-label="Назад к выбору">←</button>
+      <div class="cfg" id="cfg"></div>
+      <div class="count" id="count" aria-live="polite">0</div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="hint">Тап по клетке отмечает проблему. Ряд, столбец или диагональ — бинго.</p>
+    <button class="btn again" id="again">Перемешать заново</button>
+  </section>
+</main>
+
+<div id="win" class="win hidden" role="dialog" aria-modal="true" aria-labelledby="wt">
+  <canvas id="fx"></canvas>
+  <div class="win-in">
+    <h2 id="wt">Бинго!</h2>
+    <p id="wl">Вы выиграли в бинго и в эту жизнь</p>
+    <p class="sub" id="ws"></p>
+    <button class="btn main" id="share">Поделиться</button>
+    <button class="btn" id="peek">Посмотреть карточку</button>
+    <button class="btn" id="new">Выбрать другую машину</button>
+  </div>
+</div>
+
+<script>
+// ---- Справочник. y — с какого года проблема есть, e — двигатели, f — топливо (p — бензин)
+const MODELS=[{id:'l322',name:'Range Rover L322'}];
+const ENGINES=[
+ {id:'bmw',  name:'4.4 BMW (M62)',  y:[2002,2005],f:'p',instant:'Мотор 4.4 BMW. Карточка не нужна: вы уже победили.'},
+ {id:'td6',  name:'3.0 Td6 (дизель)',y:[2002,2005],f:'d'},
+ {id:'jag',  name:'4.4 Jaguar',     y:[2006,2009],f:'p'},
+ {id:'sc42', name:'4.2 SC',         y:[2006,2009],f:'p'},
+ {id:'tdv36',name:'3.6 TDV8',       y:[2006,2009],f:'d'},
+ {id:'v50',  name:'5.0',            y:[2010,2012],f:'p'},
+ {id:'v50sc',name:'5.0 SC',         y:[2010,2012],f:'p'},
+ {id:'tdv44',name:'4.4 TDV8',       y:[2010,2012],f:'d'},
+];
+// shortcut: диапазоны лет двигателей и «2006+» у подножек, радиатора, бублика, бачка — по памяти, сверить
+const PROBLEMS=[
+ ['Залипшие клапана пневмы'],
+ ['Протёртые пневмобаллоны'],
+ ['Сгоревший компрессор пневмоподвески',{s:'Сгоревший компрессор пневмы'}],
+ ['Лопающийся пластик в системе охлаждения',{s:'Лопающийся пластик'}],
+ ['Клапаны печки'],
+ ['Клапан Webasto'],
+ ['Замена моторчика печки'],
+ ['Запотевание масляного радиатора',{y:2006}],
+ ['Оптика MOST'],
+ ['Вода в салоне'],
+ ['Гнилые задние арки'],
+ ['Гнилые пороги'],
+ ['Гнилая крышка багажника'],
+ ['Закисшие суппорта'],
+ ['Закисший ручник'],
+ ['Сгнившие тормозные трубки'],
+ ['Окисленные массы кузова'],
+ ['Скрутки косы в порогах'],
+ ['Заклинившие выдвижные подножки',{y:2006}],
+ ['Растянутая цепь раздатки'],
+ ['Хрипящие динамики'],
+ ['Датчики высоты кузова'],
+ ['Биение кардана'],
+ ['Старая крышка расширительного бачка: избыточное давление',{y:2006,s:'Старая крышка бачка'}],
+ ['Биение «бублика» АКПП ZF 6HP26',{y:2006}],
+ ['Муфты VVT',{e:['jag']}],
+ ['Течь помпы',{e:['jag','sc42']}],
+ ['Странные звуки из компрессора',{e:['sc42','v50sc']}],
+ ['Замена турбин',{e:['tdv36']}],
+ ['ТНВД-бармен: смешивает бензин и масло',{e:['v50','v50sc'],s:'ТНВД-бармен'}],
+ ['Гремящие цепи',{e:['v50','v50sc']}],
+ ['Течёт теплообменник',{e:['tdv44']}],
+ ['Мёртвая турбина (но только одна)',{e:['tdv44']}],
+ ['Ошибка с длиной масляного фильтра',{e:['tdv44'],s:'Длина масляного фильтра',jackpot:'Вы не понаслышке знаете разницу между 110 мм и 115 мм.'}],
+ ['Топливный фильтр в баке, который никто не менял',{f:'p',s:'Фильтр в баке, который никто не менял'}],
+ ['Обгоревшие контакты бензонасоса',{f:'p'}],
+ ['Убежавший диагност, узнавший про электронику BMW',{e:['td6'],s:'Убежавший диагност'}],
+ ['Загрязнённый EGR',{e:['td6']}],
+ ['Пластиковые вихревые заслонки во впускном коллекторе',{e:['td6'],s:'Пластиковые вихревые заслонки'}],
+].map(([t,r={}])=>({t,...r}));
+
+const PHRASES=[
+ 'Вы точно поняли, что такое быть настоящим английским лордом.',
+ 'Такой дотошный… вы случайно не Шерлок Холмс?',
+ 'Элементарно, Ватсон: опять пневма.',
+ 'Лорд не чинит машину. Лорд ею наслаждается между ремонтами.',
+ 'Ваш Range Rover не сломан. У него просто характер.',
+ 'Чай остыл, машина в сервисе. Всё по-королевски.',
+ 'Диагноз поставлен. Бюджет в курсе только по касательной.',
+ 'Это не течь масла. Это метка территории.',
+ 'Вы знаете этот автомобиль лучше его конструкторов.',
+ 'Дворецкий уже вызвал эвакуатор.',
+ 'Land Rover ломается только в самых живописных местах.',
+ 'God save the Range.',
+];
+
+// ---- Логика
+const $=id=>document.getElementById(id);
+const tg=window.Telegram&&Telegram.WebApp;
+if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#003d27');tg.setBackgroundColor('#003d27')}catch(e){}}
+const BOT_LINK=''; // ссылка на Mini App вида https://t.me/<bot>/<app>, когда будет бот
+
+const fits=(p,e,y)=>(!p.e||p.e.includes(e.id))&&(!p.y||y>=p.y)&&(!p.f||p.f===e.f);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const lines=n=>{const L=[];for(let i=0;i<n;i++){L.push([...Array(n)].map((_,j)=>i*n+j),[...Array(n)].map((_,j)=>j*n+i))}
+  L.push([...Array(n)].map((_,i)=>i*(n+1)),[...Array(n)].map((_,i)=>(i+1)*(n-1)));return L};
+
+let st; // {eng,year,n,cells,on,done}
+
+function fill(sel,items){sel.innerHTML=items.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}
+fill($('model'),MODELS.map(m=>[m.id,m.name]));
+fill($('engine'),ENGINES.map(e=>[e.id,e.name]));
+function years(){const e=ENGINES.find(x=>x.id===$('engine').value);
+  fill($('year'),Array.from({length:e.y[1]-e.y[0]+1},(_,i)=>[e.y[0]+i,e.y[0]+i]))}
+$('engine').onchange=years;years();
+
+function deal(){
+  const {eng,year}=st;
+  const pool=PROBLEMS.filter(p=>fits(p,eng,year));
+  const n=pool.length>=24?5:pool.length>=16?4:3;
+  const free=n%2;const count=n*n-free;
+  const jp=pool.filter(p=>p.jackpot);
+  const rest=shuffle(pool.filter(p=>!p.jackpot));
+  const cells=shuffle([...jp,...rest.slice(0,count-jp.length)]);
+  if(free)cells.splice((n*n-1)/2,0,{t:'RRC',free:true});
+  st.n=n;st.cells=cells;st.on=cells.map(c=>!!c.free);st.line=null;
+  render();
+}
+function render(){
+  const {n,cells,on,eng,year}=st;
+  $('cfg').innerHTML=`${MODELS[0].name}<small>${eng.name} · ${year}</small>`;
+  const g=$('grid');g.style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`;
+  g.innerHTML='';
+  cells.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.className='tile'+(c.free?' free':'')+(on[i]&&!c.free?' on':'');
+    b.innerHTML=`<span>${c.s||c.t}</span>`;b.title=c.t;
+    if(c.free)b.disabled=true;else{b.setAttribute('aria-pressed',on[i]);b.onclick=()=>tap(i)}
+    g.appendChild(b);
+  });
+  count();
+}
+const count=()=>$('count').textContent=st.on.filter((v,i)=>v&&!st.cells[i].free).length;
+function tap(i){
+  st.on[i]=!st.on[i];render();
+  const c=st.cells[i];
+  if(st.on[i]&&c.jackpot)return win(c.jackpot);
+  const l=lines(st.n).find(l=>l.every(k=>st.on[k]));
+  if(l){l.forEach(k=>$('grid').children[k].classList.add('win'));setTimeout(()=>win(PHRASES[Math.floor(Math.random()*PHRASES.length)]),450)}
+}
+
+// ---- Победа
+let fxOn=false;
+function win(sub,instant){
+  $('ws').textContent=`${MODELS[0].name} · ${st.eng.name} · ${st.year}\n${sub}`;
+  $('ws').style.whiteSpace='pre-line';
+  $('peek').classList.toggle('hidden',!!instant);
+  $('win').classList.remove('hidden');
+  $('share').focus();
+  fireworks();
+}
+function closeWin(){$('win').classList.add('hidden');fxOn=false}
+function fireworks(){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const cv=$('fx'),x=cv.getContext('2d'),dpr=devicePixelRatio||1;
+  cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;x.scale(dpr,dpr);
+  const ps=[];fxOn=true;let last=0;
+  const boom=()=>{const cx=innerWidth*(.15+Math.random()*.7),cy=innerHeight*(.1+Math.random()*.45),h=Math.random()<.5?48:150+Math.random()*30;
+    for(let i=0;i<46;i++){const a=Math.PI*2*i/46,s=1.5+Math.random()*3.5;ps.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,h})}};
+  const step=t=>{
+    if(!fxOn)return x.clearRect(0,0,innerWidth,innerHeight);
+    if(t-last>450){boom();last=t}
+    x.clearRect(0,0,innerWidth,innerHeight);
+    for(const p of ps){p.x+=p.vx;p.y+=p.vy;p.vy+=.045;p.vx*=.985;p.l-=.011;
+      if(p.l>0){x.fillStyle=`hsla(${p.h},90%,62%,${p.l})`;x.fillRect(p.x,p.y,2.5,2.5)}}
+    while(ps.length&&ps[0].l<=0)ps.shift();
+    requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+$('peek').onclick=closeWin;
+$('new').onclick=()=>{closeWin();show(false)};
+$('share').onclick=async()=>{
+  const text=`Я выиграл в Royal Rovers Club Bingo и в эту жизнь. ${MODELS[0].name}, ${st.eng.name}, ${st.year}.`;
+  if(tg&&BOT_LINK)return tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`);
+  try{if(navigator.share)await navigator.share({text,url:BOT_LINK||undefined});else{await navigator.clipboard.writeText(text);$('share').textContent='Текст скопирован'}}catch(e){}
+};
+
+// ---- Экраны
+function show(game){$('setup').classList.toggle('hidden',game);$('game').classList.toggle('hidden',!game);scrollTo(0,0)}
+$('go').onclick=()=>{
+  st={eng:ENGINES.find(e=>e.id===$('engine').value),year:+$('year').value};
+  $('share').textContent='Поделиться';
+  if(st.eng.instant){show(false);return win(st.eng.instant,true)}
+  show(true);deal();
+};
+$('back').onclick=()=>show(false);
+$('again').onclick=deal;
+</script>
+</body>
+</html>
